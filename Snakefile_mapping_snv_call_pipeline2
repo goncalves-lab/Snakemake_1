@@ -1,0 +1,214 @@
+num=["327905-LR-41624_normal","327907-LR-41624_tumor"]
+num_normal=["327905-LR-41624"]
+num_tumor=["327907-LR-41624"]
+
+path="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/"
+genome="/icgc/dkfzlsdf/analysis/B210/references_genome/Mus_musculus.GRCm38.dna_rm.toplevel.fa"
+
+rule all:
+	input:	
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num,[327905]}-LR-41624.bam",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num,[327905]}-LR-41624_sort.bam",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{n,[57]}-LR-41624_no_dupl_sort.bam",
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number}_R1_val_1.fq",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number}_R2_val_2.fq",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number,'[-LR0-9]+'}_R1_val_1.fq",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number,'[-LR0-9]+'}_R2_val_2.fq",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number}.bam",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number}_sort.bam",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number}_sort.bam.bai",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number}_no_dupl_sort.bam",number=num),
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{number}_no_dupl_metrics.txt",number=num),
+		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_tum}_tumor_no_dupl_sort_RG_LB.bam",num_tum=num_tumor),
+		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_norm}_normal_no_dupl_sort_RG_LB.bam",num_norm=num_normal)
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-327907-LR-41624_tumor_no_dupl_sort_RG_LB.bam",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-327905-LR-41624_normal_no_dupl_sort_RG_LB.bam",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_normal_no_dupl_sort_RG_LB.bam",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_tumor_no_dupl_sort_RG_LB.bam",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/Mutect2_output.vcf",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Manta/results/variants/candidateSmallIndels.vcf.gz",
+#		"/home/l136n/somaticseq/indel.strelka.vcf",
+#		"/home/l136n/somaticseq/intersect.strelka.vcf",
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/test.txt"
+
+ruleorder: samtools_sort > remove_duplicates >  samtools_index #> add_readgroup_tumor > add_readgroup_normal #> combine_normal > combine_tumor
+
+rule trim_galore:
+	input:
+		r1="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_R1.fastq",
+		r2="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_R2.fastq"
+	output:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num }_R1_val_1.fq",
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num }_R2_val_2.fq"
+	shell:
+		"module load trim-galore/0.5.0 ; module load pypy/2.7-6.0.0 ; trim_galore  --output_dir /icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/  --paired {input.r1} {input.r2}  "  
+
+rule bwa_mem:
+	input:
+		R1="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_R1_val_1.fq",
+		R2="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_R2_val_2.fq"
+	output:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}.bam"
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num,'3279[-0-9LR]+'}.bam"
+	shell:
+		"module load samtools/default ; module load bwa/0.7.8 ; bwa mem  {genome}  {input.R1} {input.R2} | samtools view -h -b  > {output} "
+
+rule samtools_sort:
+	input:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}.bam"
+	output:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_sort.bam"
+	shell:
+		"module load samtools/default ; samtools sort -n  -O BAM {input} > {output} "
+
+rule remove_duplicates:
+	input:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_sort.bam"
+	output:
+		outbam="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_no_dupl_sort.bam",
+		metrics="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_dupl_metrics.txt"
+#		outbam="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num,'32790[57]-LR-41624'}_no_dupl_sort.bam",
+#		metrics="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num,'32790[57]-LR-41624'}_dupl_metrics.txt"
+#		outbam="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num,'[-LR0-9]{1,}_(?!no)'}_no_dupl_sort.bam",
+#		metrics="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num,'[-LR0-9]{1,}_(?!no)'}_dupl_metrics.txt"
+	shell:
+		"module load gatk/4.0.9.0 ; gatk MarkDuplicates -I {input}  -O {output.outbam} -M {output.metrics}  --REMOVE_DUPLICATES=true "
+
+rule samtools_index:
+	input:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_no_dupl_sort.bam"
+	output:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num}_no_dupl_sort.bam.bai"
+	shell:
+		"module load samtools/default ; samtools index  {input} "
+
+#rule test:
+#	input:
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_norm}_normal_no_dupl_sort_RG_LB.bam",num_norm=num_normal)
+#	output:
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/test.txt"
+#	shell:
+#		"  head { input } > { output }  "
+
+rule add_readgroup_normal:
+	input:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_normal}_normal_no_dupl_sort.bam"
+	output:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_normal}_normal_no_dupl_sort_RG_LB.bam"
+	shell:
+		"module load gatk/4.0.9.0 ;  gatk AddOrReplaceReadGroups   -PL Illumina -LB  { num_normal }   -PU  { num_normal }  -SM  NORMAL  -I  { input }    -O  {output} "
+
+rule add_readgroup_tumor:
+	input:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_tumor}_tumor_no_dupl_sort.bam"
+	output:
+		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_tumor}_tumor_no_dupl_sort_RG_LB.bam"
+	shell:
+		"module load gatk/4.0.9.0 ;  gatk AddOrReplaceReadGroups   -PL Illumina -LB  { num_tumor }   -PU  { num_tumor }  -SM  TUMOR     -I  { input }    -O  {output} "
+#		"module load gatk/4.0.9.0 ;  gatk AddOrReplaceReadGroups   -PL Illumina -LB   ppp    -PU   ppp   -SM  TUMOR  -I  { input }    -O  {output} "
+
+#rule add_readgroup_tumor:
+#	input:
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_tum}_no_dupl_sort.bam",num_tum=["327907-LR-41624"])
+#	output:
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_tum}_tumor_no_dupl_sort_RG_LB.bam",num_tum=["327907-LR-41624"] )
+#	shell:
+#		"module load gatk/4.0.9.0 ;  for i in { input } ; do  gatk AddOrReplaceReadGroups   -PL Illumina -LB   $i   -PU  $i  -SM  TUMOR  -I  $i  -O  /icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-$i\_tumor_no_dupl_sort_RG_LB.bam ; done   "
+
+#rule combine_normal:
+#	input:
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_norm}_normal_no_dupl_sort_RG_LB.bam",num_norm=num_normal)
+#	output:
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_normal_no_dupl_sort_RG_LB.bam"
+#	shell:
+#		" module load samtools/1.6 ; samtools merge { input } > { output } "
+#
+#rule combine_tumor:
+#	input:
+#		expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/AS-{num_tum}_tumor_no_dupl_sort_RG_LB.bam",num_tum=num_tumor)
+#	output:
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_tumor_no_dupl_sort_RG_LB.bam"
+#	shell:
+#		" module load samtools/1.6 ; samtools merge { input } > { output } "
+#
+#rule Manta:
+#	input:
+#		tumor="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_tumor_no_dupl_sort_RG_LB.bam",
+#		normal="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_normal_no_dupl_sort_RG_LB.bam"
+#	output:
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Manta/results/variants/candidateSmallIndels.vcf.gz"
+#	shell:
+#		" module load manta/default ;  configManta.py  --normalBam { input.normal }  --tumorBam { input.tumor  }  \
+#		--referenceFasta /icgc/dkfzlsdf/analysis/B210/Luca/Naked_molerat/Combined_mm10.fa \
+#		--runDir /icgc/dkfzlsdf/analysis/B210/Luca/Manta ;  /icgc/dkfzlsdf/analysis/B210/Luca/Manta/runWorkflow.py -m local -j 8 "
+
+#rule Strelka:
+#	input:
+#		indels="/icgc/dkfzlsdf/analysis/B210/Luca/Manta/results/variants/candidateSmallIndels.vcf.gz",
+#		tumor="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_tumor_no_dupl_sort_RG_LB.bam",
+#		normal="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_normal_no_dupl_sort_RG_LB.bam"
+#	output:
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/candidateSmallIndels.vcf.gz"
+#	shell:
+#		" module load strelka/2.8.4 ;  /tbi/software/x86_64/strelka/strelka-2.8.4/el7/bin/configureStrelkaSomaticWorkflow.py --normalBam { input.normal }   --tumorBam   { input.tumor }  \
+#		--indelCandidates  { input.indels } \
+#		--referenceFasta  { genome }   --runDir /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/ ; /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/runWorkflow.py -m local -j 8 "
+
+#rule Mutect2:
+#	input:
+#		tumor="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_tumor_no_dupl_sort_RG_LB.bam",
+#		normal="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_normal_no_dupl_sort_RG_LB.bam"
+#	output:
+#		"/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/Mutect2_output.vcf"
+#	shell:
+#		" module load gatk/4.0.9.0 ; cd /icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/ ;  gatk Mutect2 -R   { genome }  \
+#		-I  { input.tumor }   -I  { input.normal }   -tumor  TUMOR  \
+#		-normal NORMAL  --dbsnp /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs.vcf  --cosmic COSMIC.vcf    -O Mutect2_output.vcf "
+
+#rule Somaticseq_train:
+#	input:
+#		mutect2="/icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/Mutect2_output.vcf",
+#		tumor="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_tumor_no_dupl_sort_RG_LB.bam",
+#		normal="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_normal_no_dupl_sort_RG_LB.bam",
+#		strelka_snv="/icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.snvs.vcf.gz",
+#		strelka_indels="/icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.indels.vcf.gz"
+#	output:
+#		"/home/l136n/somaticseq/indel.strelka.vcf"
+#	shell:
+#		"module load python/3.6.1 ; module load  bedtools/default ; module load  R/default  ;\
+#		somaticseq/run_somaticseq.py   --output-directory /home/l136n/somaticseq/  --truth-snv /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_snvs.vcf \
+#		--truth-indel /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_indels.vcf   --genome-reference { genome }  \
+#		-train  paired --normal-bam /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/ERR595788_sort_RG_LB_mod_new.bam --tumor-bam /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/ERR595793_sort_RG_LB_mod_new.bam  \
+#		--strelka-snv  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.snvs.vcf.gz  \
+#		--strelka-indel  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.indels.vcf.gz "
+
+#rule Somaticseq_call:
+#	input:
+#		mutect2="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/Mutect2_output.vcf",
+#		tumor="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_tumor_no_dupl_sort_RG_LB.bam",
+#		normal="/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/combined_normal_no_dupl_sort_RG_LB.bam",
+#		strelka_snv="/icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.snvs.vcf.gz",
+#		strelka_indels="/icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.indels.vcf.gz"
+#	output:
+#		"/home/l136n/somaticseq/intersect.strelka.vcf"
+#	shell:
+#		"module load python/3.6.1 ;  module load  bedtools/default ; module load  R/default ;\
+#		somaticseq/run_somaticseq.py   --output-directory /home/l136n/somaticseq/  --truth-snv /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_snvs.vcf \
+#		--truth-indel /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_indels.vcf   --genome-reference { genome }  \
+#		paired --normal-bam /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/ERR595788_sort_RG_LB_mod_new.bam --tumor-bam /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/ERR595793_sort_RG_LB_mod_new.bam  \
+#		--strelka-snv  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.snvs.vcf.gz  \
+#		--strelka-indel  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.indels.vcf.gz "
+#
+#
+#
+##               "module load python/3.6.1 ;  cd ~/somaticseq ;  ./somaticseq_parallel.py --somaticseq-train  --truth-snv /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_snvs.vcf  \
+##               --truth-indel  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_indels.vcf  --output-dir /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/  \
+##             	--genome-reference { genome  }  paired --tumor-bam { input.tumor } \
+##               --normal-bam  { input.normal }  --mutect2-vcf  { input.mutect2 }  \
+##               --strelka-snv  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.snvs.vcf.gz  --strelka-indel  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.indels.vcf.gz
+##
+##             	"module load python/3.6.1 ;  cd ~/somaticseq ;  ./somaticseq_parallel.py --classifier -snv  --truth-snv /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_snvs.vcf  \
+##                --truth-indel  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/mus_musculus_newIDs_indels.vcf  --output-dir /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/  \
+##                --genome-reference { genome  }  paired --tumor-bam { input.tumor } \
+##                --normal-bam  { input.normal }  --mutect2-vcf  { input.mutect2 }  \
+##                --strelka-snv  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.snvs.vcf.gz  --strelka-indel  /icgc/dkfzlsdf/analysis/B210/Luca/Mouse_mm10/results/variants/somatic.indels.vcf.gz
