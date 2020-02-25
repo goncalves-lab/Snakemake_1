@@ -11,15 +11,8 @@ outdir="/icgc/dkfzlsdf/analysis/B210/Luca/016975/"
 #gendict="/icgc/dkfzlsdf/analysis/B210/references_genome/Mus_musculus.GRCm38.dna_rm.toplevel_short_IDs.dict"
 genome="/icgc/dkfzlsdf/analysis/B210/references_genome/Heterocephalus_glaber_female.HetGla_female_1.0.dna_rm.toplevel_short_ids.fa"
 gendict="/icgc/dkfzlsdf/analysis/B210/references_genome/Heterocephalus_glaber_female.HetGla_female_1.0.dna_rm.toplevel_short_ids.dict"
-#manta_outdir="/icgc/dkfzlsdf/analysis/B210/Luca/016298/pairwise/Manta/"
-#strelka_outdir="/icgc/dkfzlsdf/analysis/B210/Luca/016298/pairwise/Strelka/"
-#mutect2_outdir="/icgc/dkfzlsdf/analysis/B210/Luca/016298/pairwise/Mutect2/"
-#configfile:"config5.yaml"
 
-#AS-386922-LR-46301_combined_tumor_RG.bam
-#names=expand("{ID}",ID=glob_wildcards("/icgc/dkfzlsdf/analysis/B210/Luca/016298/pairwise_merged/{id}_RG.bam").id)
 
-#name1_all=name1_normal=expand("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/Nassar_control/{ID,ID2}",ID=glob_wildcards("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/Nassar_control/{id}_1.fastq").id,ID2=glob_wildcards("/icgc/dkfzlsdf/analysis/B210/Luca/Snakemake/Nassar_control/{id}_1.fastq").id)
 name_normal="/icgc/dkfzlsdf/analysis/B210/Luca/016975/AS-422417"
 name1_normal=expand("/icgc/dkfzlsdf/analysis/B210/Luca/016975/{ID}",ID=glob_wildcards("/icgc/dkfzlsdf/analysis/B210/Luca/016975/{id}_combined_liver_R1.fastq").id)
 name1 = expand("/icgc/dkfzlsdf/analysis/B210/Luca/016975/{ID}",ID=glob_wildcards("/icgc/dkfzlsdf/analysis/B210/Luca/016975/{id}_combined_tumor_R1.fastq").id )
@@ -62,20 +55,6 @@ rule all:
 #		expand("{out}Consensus.sINDEL.vcf",out=outdir)
 
 ruleorder:   bwa_genome_index  > samtools_index  > Manta > Strelka > Mutect2 > index_vcf > merge_vcf > sort_vcf > somaticseq_call
-
-#samtools_sort > remove_duplicates >  samtools_index #> add_readgroup_combined_tumor > add_readgroup_normal #> combine_normal > combine_tumor
-
-
-#def determine_combined_tumor_samples(wildcards):
-#	return f"{config['combined_tumor'][wildcards.tumor]}.bam"
-
-#def determine_all_samples(wildcards):
-#	return f"{config['samples'][wildcards.samples]}.bam"
-
-#def determine_all_fastq(wildcards):
-#	return expand("{name}_R{number}.fastq",name=config["samples"],number=["1","2"] )
-##	return expand(f"{config['samples'][wildcards.samples]}_R{number}.fastq",number=["1","2"])
-
 
 
 rule gatk_dict:
